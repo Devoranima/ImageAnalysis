@@ -51,7 +51,24 @@
      <item row="6" column="3">
       <layout class="QVBoxLayout" name="verticalLayout_7">
        <item>
-        <widget class="QComboBox" name="comboBox"/>
+        <widget class="QComboBox" name="selectMaterialComboBox">
+         <property name="accessibleName">
+          <string>selectMaterialComboBox</string>
+         </property>
+         <property name="editable">
+          <bool>false</bool>
+         </property>
+         <item>
+          <property name="text">
+           <string>sex</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>gay</string>
+          </property>
+         </item>
+        </widget>
        </item>
        <item>
         <widget class="QPushButton" name="pushButton_2">

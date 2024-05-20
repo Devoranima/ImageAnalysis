@@ -8,3 +8,5 @@ share/
 
 __pycache__
 .venv/
+venv/
+ImageAnalysis

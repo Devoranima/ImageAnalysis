@@ -60,7 +60,7 @@
      <string>номер записи</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_2">
+   <widget class="QPushButton" name="DeleteBtn">
     <property name="geometry">
      <rect>
       <x>691</x>
@@ -68,6 +68,9 @@
       <width>80</width>
       <height>23</height>
      </rect>
+    </property>
+    <property name="accessibleName">
+     <string>DeleteBtn</string>
     </property>
     <property name="text">
      <string>Удалить</string>
