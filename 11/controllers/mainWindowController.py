@@ -7,7 +7,17 @@ from PIL import Image, ImageEnhance
 import cv2
 import numpy as np
 
+
+
 def pil2pixmap(im):
+  """Функция для перевода изображения из библиотеки pillow в pixelmap из библиотеки PyQt5 для последующего отображения в пользовательском интерфейсе
+
+  Args:
+      im (ndarray): Исходное изображание pillow
+
+  Returns:
+      pixmap: Изображение в виде набора пикселей
+  """
   if im.mode == "RGB":
       r, g, b = im.split()
       im = Image.merge("RGB", (b, g, r))
@@ -33,8 +43,9 @@ class MainWindowController(QMainWindow):
     self.addListeners()
     self.fetchMaterials()
 
-
   def addBindings(self):
+    """Метод 'привязывает' элементы интерфейса к инстанции класса контроллера через метод findChild 
+    """
     self.selectMaterialComboBox = self.findChild(QComboBox, "selectMaterialComboBox")
     self.ChangeMaterialsButton = self.findChild(QPushButton, "ChangeMaterialsButton")
     self.saveInReportBtn = self.findChild(QPushButton, "saveInReportBtn")
@@ -63,6 +74,8 @@ class MainWindowController(QMainWindow):
 
 
   def addListeners(self):
+    """Метод добавляет слушатели событий к интерактивным элементам интерфейса
+    """
     self.selectMaterialComboBox.currentIndexChanged.connect(self.selectMaterialComboBox_currentIndexChangedListener)
     self.ChangeMaterialsButton.clicked.connect(self.openDialog)
     self.actionOpenFile.triggered.connect(self.loadFile)
@@ -73,6 +86,8 @@ class MainWindowController(QMainWindow):
     self.saveInReportBtn.clicked.connect(self.saveInReport)
 
   def loadFile(self): 
+    """Метод загружает путь к изображению через модальное окно QFileDialog 
+    """
     filename, _ = QFileDialog.getOpenFileName(
         self,
         "Select a File", 
@@ -84,10 +99,17 @@ class MainWindowController(QMainWindow):
       self.loadImage()
 
   def loadImage(self):
+    """Метод загружает изображение в окна оригинального и отфильтрованного изображения
+    """
     self.loadSourceImage()
     self.loadFilteredImage()
   
   def saveInReport(self):
+    """Метод вызывается при нажатии кнопки Сохранить в отчет. Вызывает метод explore для обработки изображения, а затем обновляет интерфейс пользователя
+
+    Returns:
+        None: При незагруженном изображении вернет None 
+    """
     if self.filename == None: return None
     image, area_c, bad_contours_amount = self.explore()
     self.loadResultImage(image)
@@ -104,6 +126,13 @@ class MainWindowController(QMainWindow):
     self.resultLabels["BadCountorsAmountValue"].setText(str(bad_contours_amount))
 
   def explore(self):
+    """Метод обрабатывает отфильтрованное изображение, полученное через метод getFilteredImage и возвращает информацию по найденным порам
+
+    Returns:
+        image: Обработанное изображение с выделенными порами
+        area_c: Пористость материала на изображении
+        len(bad_contours): Количество пор, у которых площадь больше нормы
+    """
     image = self.getFilteredImage()
     image = np.asarray(image)
     image = image[1:].copy()
@@ -132,6 +161,11 @@ class MainWindowController(QMainWindow):
     return image, area_c, len(bad_contours)
 
   def loadResultImage(self, image):
+    """Загружает обработанное изображение в пользователький интерфейс
+
+    Args:
+        image (ndarray): Обработанное изображение
+    """
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     image = Image.fromarray(image)
 
@@ -142,6 +176,8 @@ class MainWindowController(QMainWindow):
     ResultImageScene.addItem(pic)
 
   def loadSourceImage(self):
+    """Метод для загрузки исходного изображения в пользовательский интерфейс
+    """
     sourceImageScene = QGraphicsScene()
     self.SourceImageView.setScene(sourceImageScene)
 
@@ -151,11 +187,15 @@ class MainWindowController(QMainWindow):
     sourceImageScene.addItem(pic)
 
   def loadFilteredImage(self):
+    """Метод для загрузки отфильтрованного изображения в пользовательский интерфейс
+    """
     self.filteredImageScene = QGraphicsScene()
     self.FilteredImageView.setScene(self.filteredImageScene)
     self.applyFilters()
 
   def applyFilters(self):
+    """Метод для применения фильтров для копии исходного изображения
+    """
     self.filteredImageScene.clear()
     pic = QGraphicsPixmapItem()
     
@@ -164,6 +204,7 @@ class MainWindowController(QMainWindow):
     self.filteredImageScene.addItem(pic)
 
   def getFilteredImage(self):
+    """Метод для получения отфильтрованного изображения"""
     image = Image.open(self.filename)
  
     filter = ImageEnhance.Brightness(image)
@@ -176,15 +217,18 @@ class MainWindowController(QMainWindow):
     return image
 
   def openDialog(self):
+    """Метод для открытия диалогового окна выбора материала"""
     DialogController().exec_()
     self.fetchMaterials()
 
   def fetchMaterials(self):
+    """Метод для получения списка материалов из базы данных"""
     self.materials = getMaterials()
     self.selectMaterialComboBox.clear()
     self.selectMaterialComboBox.addItems(x[1] for x in self.materials)
 
   def selectMaterialComboBox_currentIndexChangedListener(self):
+    """Слушатель события изменения индекса в комбобоксе выбора материала"""
     self.material = self.materials[self.selectMaterialComboBox.currentIndex()]
     self.materialLabels["SquareValue"].setText(str(self.material[2]))
     self.materialLabels["SquareDeviationValue"].setText(str(self.material[3]))

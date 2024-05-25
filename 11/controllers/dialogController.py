@@ -15,6 +15,8 @@ class DialogController(QDialog):
     self.fetchMaterials()
 
   def addBindings(self):
+    """Метод 'привязывает' элементы интерфейса к инстанции класса контроллера через метод findChild 
+    """
     self.MaterialsTableWidget = self.findChild(QTableWidget, "MaterialsTableview")
     labels = ['ID', 'Наименование', 'Площадь поры', 'Откл. от площади', 'Пористость', 'Откл. от пористости']
     self.MaterialsTableWidget.setHorizontalHeaderLabels(labels)
@@ -32,10 +34,17 @@ class DialogController(QDialog):
 
 
   def addListeners(self):
+    """Метод добавляет слушатели событий к интерактивным элементам интерфейса
+    """
     self.DeleteMaterialBtn.clicked.connect(self.DeleteMaterialBtn_clicked)
     self.AddMaterialBtn.clicked.connect(self.AddMaterialBtn_clicked)
   
   def DeleteMaterialBtn_clicked(self):
+    """Слушатель события нажатия на кнопку удаления материала
+
+    Returns:
+        boolean: Возвращает False, если материал не может быть найден
+    """
     id = self.DeleteMaterialID.text()
     self.DeleteMaterialID.setText("")
 
@@ -55,6 +64,8 @@ class DialogController(QDialog):
     return True
   
   def AddMaterialBtn_clicked(self):
+    """Слушатель события нажатия на кнопку добавления материала"""
+
     name = self.AddMaterialName.text()
     square = self.AddMaterialSquare.text()
     squareDeviation = self.AddMaterialSquareDeviation.text()
@@ -76,6 +87,7 @@ class DialogController(QDialog):
     return True
 
   def fetchMaterials(self):
+    """Метод для получения списка материалов из базы данных"""
     self.materials = getMaterials()
     self.MaterialsTableWidget.setRowCount(0)
     
