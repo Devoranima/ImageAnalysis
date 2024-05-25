@@ -1,6 +1,6 @@
 import sys
 from PyQt5.QtWidgets import QApplication
-from ui.uisppr import MainWindowController
+from controllers.mainWindowController import MainWindowController
 
 class AppController(QApplication):
   def __init__(self):

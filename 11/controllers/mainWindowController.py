@@ -1,10 +1,9 @@
 from PyQt5 import uic
 from PyQt5.QtWidgets import QPushButton, QMainWindow, QComboBox, QLabel, QAction, QFileDialog, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem, QSlider
 from PyQt5.QtGui import QPixmap, QImage
-from db.dbController import getMaterials
-from ui.uibd import DialogController
+from controllers.dbController import getMaterials
+from controllers.dialogController import DialogController
 from PIL import Image, ImageEnhance
-import PIL.ImageQt as PQ
 import cv2
 import numpy as np
 
@@ -39,20 +38,29 @@ class MainWindowController(QMainWindow):
     self.selectMaterialComboBox = self.findChild(QComboBox, "selectMaterialComboBox")
     self.ChangeMaterialsButton = self.findChild(QPushButton, "ChangeMaterialsButton")
     self.saveInReportBtn = self.findChild(QPushButton, "saveInReportBtn")
+
     self.materialLabels = dict()
     self.materialLabels["PorosityValue"] = self.findChild(QLabel, "PorosityValue")
     self.materialLabels["PorosityDeviationValue"] = self.findChild(QLabel, "PorosityDeviationValue")
     self.materialLabels["SquareValue"] = self.findChild(QLabel, "SquareValue")
     self.materialLabels["SquareDeviationValue"] = self.findChild(QLabel, "SquareDeviationValue")
 
+
+    self.resultLabels = dict()
+    self.resultLabels["PorosityResultValue"] = self.findChild(QLabel, "PorosityResultValue")
+    self.resultLabels["PorosityVerdictResultValue"] = self.findChild(QLabel, "PorosityVerdictResultValue")
+    self.resultLabels["BadCountorsAmountValue"] = self.findChild(QLabel, "BadCountorsAmountValue")
+
     self.SourceImageView = self.findChild(QGraphicsView, "SourceImageView")
     self.FilteredImageView = self.findChild(QGraphicsView, "FilteredImageView")
+    self.ResultImageView = self.findChild(QGraphicsView, "ResultImageView")
 
     self.ImageContrastSlider = self.findChild(QSlider, "ImageContrastSlider")
     self.ImageBrightnessSlider = self.findChild(QSlider, "ImageBrightnessSlider")
     self.ImageSharpnessSlider = self.findChild(QSlider, "ImageSharpnessSlider")
 
     self.actionOpenFile = self.findChild(QAction, "actionOpen")
+
 
   def addListeners(self):
     self.selectMaterialComboBox.currentIndexChanged.connect(self.selectMaterialComboBox_currentIndexChangedListener)
@@ -61,11 +69,11 @@ class MainWindowController(QMainWindow):
 
     self.ImageBrightnessSlider.valueChanged.connect(self.applyFilters)
     self.ImageContrastSlider.valueChanged.connect(self.applyFilters)
-    self.saveInReportBtn.clicked.connect(self.explore)
-
+    self.ImageSharpnessSlider.valueChanged.connect(self.applyFilters)
+    self.saveInReportBtn.clicked.connect(self.saveInReport)
 
   def loadFile(self): 
-    filename, ok = QFileDialog.getOpenFileName(
+    filename, _ = QFileDialog.getOpenFileName(
         self,
         "Select a File", 
         None, 
@@ -78,39 +86,60 @@ class MainWindowController(QMainWindow):
   def loadImage(self):
     self.loadSourceImage()
     self.loadFilteredImage()
+  
+  def saveInReport(self):
+    if self.filename == None: return None
+    image, area_c, bad_contours_amount = self.explore()
+    self.loadResultImage(image)
+    self.resultLabels["PorosityResultValue"].setText(str(area_c))
+
+    resultVerdict = "не в норме"
+    color = 'red'
+    if self.material[4] - self.material[5] < area_c < self.material[5] + self.material[4]:
+      resultVerdict = "в норме"
+      color = 'green'
+    self.resultLabels["PorosityVerdictResultValue"].setText(resultVerdict)
+    self.resultLabels["PorosityVerdictResultValue"].setStyleSheet("color: " + color)
+
+    self.resultLabels["BadCountorsAmountValue"].setText(str(bad_contours_amount))
 
   def explore(self):
-    image = Image.open(self.filename)
-    image=cv2.imread(self.filename) 
-# дополнительная обработка шумов
+    image = self.getFilteredImage()
+    image = np.asarray(image)
+    image = image[1:].copy()
     blured = cv2.GaussianBlur(image, (5, 5), 0)
-# конвертация BGR формата в формат HSV
     hsv = cv2.cvtColor(blured, cv2.COLOR_BGR2HSV)
     lower_black = np.array([0, 0, 0])
     upper_black = np.array([120, 120, 120])
-# определяем маску для обнаружения контуров пор.
-# будут выделены поры в заданном диапозоне
     mask = cv2.inRange(hsv, lower_black, upper_black)
-# получаем массив конутров
     contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
     good_contours = []
     bad_contours = []
     area_c = 0
-# находим поры, не превышающие нормативную площадь
-    for contour in contours:
-# также подсчитываем общую площадь пор
-        area_c += cv2.contourArea(contour)
-        if 0 <= cv2.contourArea(contour):
-            good_contours.append(contour)
-        else:
-            bad_contours.append(contour)
-    area_c = area_c / (image.shape[0] * image.shape[1])
-# выделяем 'хорошие' поры зеленым цветом
-    cv2.drawContours(image, good_contours, -1, (0, 255, 0), 3)
-# выделяем 'плохие' поры красным цветом
-    cv2.drawContours(image, bad_contours, -1, (255, 0, 0), 3)
-    print( image, area_c, len(bad_contours))
 
+    minArea = self.material[2] - self.material[3]
+    maxArea = self.material[2] + self.material[3]
+    for contour in contours:
+      area_c += cv2.contourArea(contour)
+      if minArea <= cv2.contourArea(contour) <= maxArea:
+        good_contours.append(contour)
+      else:
+        bad_contours.append(contour)
+    area_c = area_c / (image.shape[0] * image.shape[1])
+    cv2.drawContours(image, good_contours, -1, (0, 255, 0), 3)
+    cv2.drawContours(image, bad_contours, -1, (255, 0, 0), 3)
+
+    return image, area_c, len(bad_contours)
+
+  def loadResultImage(self, image):
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = Image.fromarray(image)
+
+    ResultImageScene = QGraphicsScene()
+    self.ResultImageView.setScene(ResultImageScene)
+    pic = QGraphicsPixmapItem()
+    pic.setPixmap(pil2pixmap(image))
+    ResultImageScene.addItem(pic)
 
   def loadSourceImage(self):
     sourceImageScene = QGraphicsScene()
@@ -124,29 +153,27 @@ class MainWindowController(QMainWindow):
   def loadFilteredImage(self):
     self.filteredImageScene = QGraphicsScene()
     self.FilteredImageView.setScene(self.filteredImageScene)
+    self.applyFilters()
 
+  def applyFilters(self):
+    self.filteredImageScene.clear()
     pic = QGraphicsPixmapItem()
-    image = Image.open(self.filename)
- 
-    filter = ImageEnhance.Brightness(image)
-    image = filter.enhance(self.ImageBrightnessSlider.value()/100)
- 
+    
+    image = self.getFilteredImage()
     pic.setPixmap(pil2pixmap(image))
     self.filteredImageScene.addItem(pic)
 
-  def applyFilters(self):
-    if self.filename == None: return None
-    self.filteredImageScene.clear()
-    pic = QGraphicsPixmapItem()
+  def getFilteredImage(self):
     image = Image.open(self.filename)
  
     filter = ImageEnhance.Brightness(image)
     image = filter.enhance(self.ImageBrightnessSlider.value()/100)
     filter = ImageEnhance.Contrast(image)
     image = filter.enhance(self.ImageContrastSlider.value()/100+1)
+    filter = ImageEnhance.Sharpness(image)
+    image = filter.enhance(self.ImageSharpnessSlider.value()/100+1)
 
-    pic.setPixmap(pil2pixmap(image))
-    self.filteredImageScene.addItem(pic)
+    return image
 
   def openDialog(self):
     DialogController().exec_()

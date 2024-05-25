@@ -1,6 +1,6 @@
 from PyQt5 import uic
 from PyQt5.QtWidgets import  QPushButton, QWidget, QDialog, QTableWidget, QTableWidgetItem, QLineEdit, QMessageBox
-from db.dbController import getMaterials, deleteMaterial, addMaterial
+from controllers.dbController import getMaterials, deleteMaterial, addMaterial
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt
 
